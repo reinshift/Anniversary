@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3ece2">
+  <title>写给我们 · 一周年</title>
+  <link rel="stylesheet" href="scroll-craft/plugins/nateherk-design/skills/scroll-craft/engine/scrollcraft.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preload" as="image" href="assets/wordcloud.svg">
+  <script defer src="data/content.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="veil" aria-hidden="true"></div>
+  <div class="scroll-line" aria-hidden="true"><i data-sc-progress></i></div>
+
+  <main id="story">
+
+    <section id="words" class="chapter chapter-words">
+      <div class="chapter-inner title-page" data-sc-in data-sc-stagger="120">
+        <p class="folio">壹</p>
+        <h1 class="sc-display sc-display--xl">无法掩饰的，<em>在每一句日常</em>里的</h1>
+        <p class="verse">春来夏往，<br>秋收冬藏。</p>
+        <p class="verse-from">致亲爱的老大</p>
+      </div>
+
+      <div class="cloud-act">
+        <div class="cloud-curtain">
+          <p class="cloud-kicker">我们说过最多的话</p>
+          <h2 class="cloud-title sc-display sc-display--lg">言为心声</h2>
+        </div>
+        <figure class="wordcloud-plate">
+          <img src="assets/wordcloud.svg" alt="由我们真实聊天词频生成的词云" decoding="async">
+          <figcaption>一些爱护、尊敬，和控制不住。</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="photos" class="chapter chapter-photos">
+      <div class="chapter-inner photo-stage" data-sc-stage>
+        <div class="chapter-heading" data-sc-cue="0 0.6 0">
+          <p class="folio">贰</p>
+          <h2 class="sc-display sc-display--lg">此刻<em>留得久一点</em></h2>
+          <p class="verse">此情无计可消除，<br>才下眉头，却上心头。</p>
+          <p class="verse-from">李清照《一剪梅》</p>
+          <p class="gallery-hint">叁拾叁帧 · 点一下，看清楚些</p>
+        </div>
+        <div class="gallery-plane">
+          <div id="gallery" class="tilted-gallery" aria-label="照片墙，点击任意一张放大"></div>
+        </div>
+        <p class="gallery-margin" aria-hidden="true">光是偏心的<br>它总落在你那一侧</p>
+      </div>
+    </section>
+
+    <section id="timeline" class="chapter chapter-diary">
+      <div class="chapter-inner diary-wrap">
+        <div class="chapter-heading diary-heading" data-sc-in data-sc-stagger="100">
+          <p class="folio">叁</p>
+          <h2 class="sc-display sc-display--lg">时间里<em>有了你</em></h2>
+          <p class="verse">只缘感君一回顾，<br>使我思君朝与暮。</p>
+          <p class="verse-from">《子夜歌》</p>
+        </div>
+
+        <div class="rail-frame">
+          <div class="rail-head">
+            <button id="origin-button" class="rail-origin" type="button">回到起点 2025.08.18</button>
+            <p class="rail-legend">原点之后 <b id="rail-after">—</b> 天 <i>／</i> 之前 <b id="rail-before">—</b> 天</p>
+          </div>
+          <div class="rail-shell">
+            <div class="rail-axis" aria-hidden="true"></div>
+            <div id="date-rail" class="date-rail" role="tablist" aria-label="日记日期轴"></div>
+          </div>
+          <div class="rail-years" id="rail-years" aria-label="快速跳到某一年"></div>
+          <div class="rail-months" id="rail-months" aria-label="跳到某个月"></div>
+        </div>
+
+        <article class="diary-reader">
+          <div class="diary-meta">
+            <p class="folio">DEAR DIARY</p>
+            <h3 id="diary-date">2025.08.18</h3>
+            <p id="diary-offset" class="diary-offset">—</p>
+            <p class="diary-hint">这一页，是当天写下的原稿。</p>
+          </div>
+          <div class="diary-sheet">
+            <div id="diary-pages" class="diary-pages"></div>
+            <p id="diary-empty" class="diary-empty" hidden>这一天的原稿还没有生成图像。</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="forever" class="chapter chapter-finale">
+      <div class="finale-stage" data-sc-stage>
+        <div class="finale-silence">
+          <p class="folio">最后一页，不是结束</p>
+          <p id="finale-date">2025.08.18</p>
+          <p class="verse verse-light">往后三餐四季，<br>事事回应，来日方长</p>
+          <p class="verse-from">——致最爱的陈籽亦</p>
+        </div>
+        <div id="memory-orbit" aria-hidden="true"></div>
+        <div class="letter">
+          <span>One<small>YEAR OF US</small></span>
+          <h2>一周年快乐</h2>
+          <i aria-hidden="true"></i>
+          <p class="verse verse-light">愿我如星君如月，<br>夜夜流光相皎洁。</p>
+          <p class="verse-from">范成大《车遥遥篇》</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <dialog id="photo-dialog">
+    <button id="close-photo" type="button" aria-label="关闭照片">×</button>
+    <img id="large-photo" alt="" decoding="async">
+  </dialog>
+
+  <script src="scroll-craft/plugins/nateherk-design/skills/scroll-craft/engine/scrollcraft.js"></script>
+</body>
+</html>

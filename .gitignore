@@ -1,0 +1,18 @@
+# 原始输入与大体积分析数据
+2026-09-28_*.pdf
+chatlab.jsonl
+imgs/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 本地编辑器与系统文件
+.DS_Store
+Thumbs.db
+.vscode/
+
+# 临时构建与截图产物
+builds/
+screenshots/
+*.log

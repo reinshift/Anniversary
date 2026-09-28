@@ -1,0 +1,844 @@
+/* ==========================================================================
+   写给我们 · 一周年
+   配色不写死在各章节上：body 的 --canvas / --ink 由 app.js 随滚动连续插值，
+   所有章节只负责排版，背景留给那一条渐变，避免出现生硬的分界线。
+   ========================================================================== */
+
+:root {
+  /* 由 JS 逐帧覆盖的活动色 —— 这里的值只是首屏初值 */
+  --canvas: #f3ece2;
+  --canvas-deep: #e8dece;
+  --ink: #2b2024;
+  --ink-soft: #6f635f;
+  --accent: #7a2f3f;
+  --glow: #b4895d;
+
+  /* 固定色板 */
+  --paper: #f3ece2;
+  --dusk: #6c4a4f;
+  --deep: #3a1724;
+  --rose: #b56c73;
+  --gold: #b4895d;
+  --line: color-mix(in oklab, var(--ink) 18%, transparent);
+  --glass: color-mix(in oklab, var(--canvas) 62%, transparent);
+
+  /* 排版 */
+  --sc-font-display: "Playfair Display", "Songti SC", "STSong", "SimSun", serif;
+  --sc-font-text: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --sc-font-mono: "DM Mono", Consolas, monospace;
+  --sc-canvas: var(--canvas);
+  --sc-surface: color-mix(in oklab, var(--canvas) 84%, #fff);
+  --sc-ink: var(--ink);
+  --sc-ink-soft: var(--ink-soft);
+  --sc-accent: var(--accent);
+
+  /* 间距（spacious，density 3） */
+  --space-2xs: 8px;
+  --space-xs: 16px;
+  --space-sm: 24px;
+  --space-md: 40px;
+  --space-lg: 64px;
+  --space-xl: 96px;
+
+  --radius: 4px;
+  --blur: 18px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--sc-font-text);
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  /* 背景色由 JS 逐帧插值，这里不要再加 transition：
+     每帧重启一次过渡会让合成器反复无效化整屏。 */
+  transition: color 260ms linear;
+}
+
+/* 纸纹 + 顶部/底部柔和渐隐，让色彩过渡更像光而不是色块 */
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in oklab, #fff 26%, transparent), transparent 60%),
+    radial-gradient(120% 70% at 50% 110%, color-mix(in oklab, var(--deep) 16%, transparent), transparent 62%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  pointer-events: none;
+  /* 不用 mix-blend-mode：底色每帧都在变，混合模式会让这一整层
+     跟着逐帧重绘。降低不透明度后观感几乎一致，但成本近于零。 */
+  opacity: 0.085;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
+}
+
+/* 滚动进度线 */
+.scroll-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 70;
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
+}
+.scroll-line i {
+  display: block;
+  height: 100%;
+  width: var(--sc-progress, 0%);
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  transform-origin: left;
+}
+
+/* --- 通用排版 ------------------------------------------------------------ */
+
+.chapter {
+  position: relative;
+  padding: var(--space-xl) var(--sc-gutter, clamp(20px, 6vw, 88px));
+}
+
+.chapter-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.folio {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--sc-font-display);
+  font-size: 13px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sc-display {
+  font-family: var(--sc-font-display);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: 0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+.sc-display--xl { font-size: clamp(2.6rem, 7vw, 5.4rem); }
+.sc-display--lg { font-size: clamp(2rem, 4.6vw, 3.6rem); }
+.sc-display em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+/* 诗句引用 —— 全站唯一的「文案」形式 */
+.verse {
+  margin: var(--space-md) 0 var(--space-2xs);
+  font-family: var(--sc-font-display);
+  font-size: clamp(1.05rem, 1.7vw, 1.4rem);
+  line-height: 2.1;
+  letter-spacing: 0.14em;
+  color: color-mix(in oklab, var(--ink) 78%, var(--canvas));
+}
+.verse-from {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--ink-soft);
+}
+.verse-light { color: color-mix(in oklab, #fff 74%, var(--rose)); }
+.verse-light + .verse-from { color: color-mix(in oklab, #fff 52%, var(--rose)); }
+
+/* --- 壹 · 字里行间 ------------------------------------------------------- */
+
+.chapter-words { padding-top: max(18vh, 140px); }
+
+.title-page {
+  min-height: 64vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 900px;
+}
+
+/* 词云：先独立居中展示标题幕，滚过后词云才浮现。
+   桌面端两者都 sticky 在同一屏内交接，因此滚动距离足够，
+   到达时能看到完整词云。 */
+.cloud-act {
+  position: relative;
+  margin-top: var(--space-xl);
+  height: 320vh;
+}
+
+.cloud-curtain,
+.wordcloud-plate {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.cloud-curtain {
+  opacity: var(--curtain-o, 1);
+  transform: scale(var(--curtain-s, 1));
+  will-change: opacity, transform;
+}
+.cloud-kicker {
+  margin: 0 0 var(--space-xs);
+  font-size: 12px;
+  letter-spacing: 0.4em;
+  color: var(--ink-soft);
+}
+.cloud-title {
+  letter-spacing: 0.3em;
+  font-size: clamp(2.4rem, 8vw, 6rem);
+}
+.cloud-title::after {
+  content: "";
+  display: block;
+  width: 80px;
+  height: 1px;
+  margin: var(--space-sm) auto 0;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.wordcloud-plate {
+  margin: -100svh 0 0;
+  padding: 0;
+  opacity: var(--cloud-o, 0);
+  will-change: opacity;
+}
+.wordcloud-plate > * { grid-area: 1 / 1; }
+.wordcloud-plate img {
+  width: min(92vw, 1000px);
+  height: auto;
+  transform: scale(var(--cloud-s, 0.94));
+  transition: transform 120ms linear;
+}
+.wordcloud-plate figcaption {
+  align-self: end;
+  margin-bottom: 6vh;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: var(--ink-soft);
+}
+
+/* --- 贰 · 光影之间 ------------------------------------------------------- */
+
+.chapter-photos { padding-top: var(--space-lg); }
+
+/* 左侧文字 + 右侧倾斜相面。相面自身超出右边界，由 overflow 裁掉，
+   视觉上像一片从右上角斜插进来、缓缓下行的照片墙。 */
+.photo-stage {
+  display: grid;
+  gap: clamp(24px, 3vw, 56px);
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.55fr);
+  grid-template-rows: auto auto;
+  align-items: start;
+}
+
+.chapter-heading { position: sticky; top: 18vh; }
+
+.gallery-hint {
+  margin: var(--space-md) 0 0;
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--ink-soft);
+}
+
+/* 补白左下角，让首屏左侧不再空荡 */
+.gallery-margin {
+  grid-column: 1;
+  grid-row: 2;
+  margin: var(--space-lg) 0 0;
+  font-family: var(--sc-font-display);
+  font-size: clamp(0.92rem, 1.4vw, 1.14rem);
+  line-height: 2.1;
+  letter-spacing: 0.16em;
+  color: color-mix(in oklab, var(--ink) 52%, var(--canvas));
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  max-height: 46vh;
+}
+
+.gallery-plane {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  /* 固定高度是关键：若列高等于整条轨道（数千 px），
+     绕角点旋转会把下半部分甩出视口。 */
+  height: min(84svh, 780px);
+  /* 往右溢出，由 overflow 裁掉，视觉上像斜插进来的一片 */
+  margin-right: calc(-1 * var(--sc-gutter, clamp(20px, 6vw, 88px)));
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, transparent, #000 10%, #000 86%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 10%, #000 86%, transparent);
+}
+
+.tilted-gallery {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: clamp(14px, 1.5vw, 26px);
+  height: 100%;
+  /* 右上 → 居中：整片朝左下倾斜。skewY 让各列顶边依次下沉，
+     形成从右上角斜向中部的斜面，且不会像 3D 投影那样退化。 */
+  transform: rotate(-5deg) skewY(-7deg) scale(1.1);
+  transform-origin: 62% 40%;
+}
+
+.gallery-column {
+  overflow: hidden;
+  height: 100%;
+}
+
+.gallery-track {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 1.5vw, 26px);
+  animation: gallery-loop var(--duration, 96s) linear infinite;
+  will-change: transform;
+}
+.tilted-gallery:hover .gallery-track,
+.tilted-gallery:focus-within .gallery-track { animation-play-state: paused; }
+
+@keyframes gallery-loop {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -50%, 0); }
+}
+
+.postcard {
+  appearance: none;
+  border: 0;
+  padding: 10px 10px 30px;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  position: relative;
+  border-radius: var(--radius);
+  /* 这里刻意不用 backdrop-filter：滚动的卡片有 60+ 张，
+     每帧重采样背景会直接把帧率打到 20fps。改用不透明的纸色叠加。 */
+  background: color-mix(in oklab, var(--canvas) 74%, #fff);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--ink) 10%, transparent),
+              0 18px 40px -24px color-mix(in oklab, var(--ink) 40%, transparent);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 420ms var(--ease), box-shadow 420ms var(--ease);
+  contain: content;
+}
+.postcard:hover,
+.postcard:focus-visible {
+  transform: rotate(0deg) translateY(-6px) scale(1.015);
+  box-shadow: 0 2px 4px color-mix(in oklab, var(--ink) 12%, transparent),
+              0 40px 70px -30px color-mix(in oklab, var(--ink) 55%, transparent);
+}
+.postcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.postcard img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+}
+.postcard small {
+  position: absolute;
+  left: 14px;
+  bottom: 9px;
+  font-family: var(--sc-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+}
+
+/* 照片弹窗 */
+#photo-dialog {
+  border: 0;
+  padding: 0;
+  max-width: 92vw;
+  max-height: 92svh;
+  background: transparent;
+}
+#photo-dialog::backdrop {
+  background: color-mix(in oklab, var(--deep) 78%, transparent);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+}
+#photo-dialog img {
+  display: block;
+  max-width: 92vw;
+  max-height: 92svh;
+  border-radius: var(--radius);
+  box-shadow: 0 50px 120px -40px #000;
+}
+#close-photo {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid color-mix(in oklab, #fff 40%, transparent);
+  border-radius: 50%;
+  background: color-mix(in oklab, #fff 12%, transparent);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* --- 叁 · 岁月有声 ------------------------------------------------------- */
+
+.chapter-diary { padding-top: var(--space-xl); }
+
+.diary-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-lg);
+}
+
+.diary-heading { position: static; max-width: 760px; }
+
+/* 时间轴：以 2025.08.18 为原点，左负右正，刻度按天数偏移定位 */
+.rail-frame {
+  min-width: 0;
+  padding: var(--space-sm) 0 var(--space-xs);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.rail-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.rail-origin {
+  appearance: none;
+  cursor: pointer;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--accent);
+  font-family: var(--sc-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  transition: background-color 260ms var(--ease), color 260ms var(--ease);
+}
+.rail-origin:hover { background: color-mix(in oklab, var(--accent) 20%, transparent); }
+.rail-origin:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.rail-legend {
+  margin: 0;
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--ink-soft);
+}
+.rail-legend b { color: var(--ink); font-weight: 500; }
+.rail-legend i { color: var(--gold); font-style: normal; padding: 0 6px; }
+
+.rail-shell {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding: var(--space-sm) 0 var(--space-md);
+  overscroll-behavior-x: contain;
+  mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+}
+
+.rail-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    color-mix(in oklab, var(--ink) 22%, transparent) 4%,
+    color-mix(in oklab, var(--ink) 22%, transparent) 96%,
+    transparent);
+}
+
+.date-rail {
+  position: relative;
+  height: 128px;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* 每个刻度靠 --x（天数换算后的像素）绝对定位，负值在原点左侧 */
+.date-tick {
+  position: absolute;
+  bottom: 0;
+  left: var(--x, 0px);
+  transform: translateX(-50%);
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0 0 8px;
+  cursor: pointer;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-family: var(--sc-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transition: color 240ms var(--ease);
+}
+/* 扩大命中区域，细刻度也能轻松点到 */
+.date-tick::before {
+  content: "";
+  position: absolute;
+  inset: -6px -8px -6px -8px;
+}
+.date-tick span { opacity: 0; transition: opacity 240ms var(--ease); }
+.date-tick::after {
+  content: "";
+  width: 1px;
+  height: var(--h, 14px);
+  background: color-mix(in oklab, var(--ink) 34%, transparent);
+  transition: background-color 240ms var(--ease), height 240ms var(--ease);
+}
+.date-tick:hover,
+.date-tick:focus-visible { color: var(--accent); }
+.date-tick:hover span,
+.date-tick:focus-visible span,
+.date-tick.is-selected span { opacity: 1; }
+.date-tick:hover::after,
+.date-tick:focus-visible::after { background: var(--accent); height: 26px; }
+.date-tick:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 3px; }
+
+.date-tick.is-selected { color: var(--accent); font-weight: 500; }
+.date-tick.is-selected::after {
+  background: var(--accent);
+  width: 2px;
+  height: 40px;
+}
+
+/* 原点刻度：2025.08.18 */
+.date-tick.is-origin::after {
+  background: var(--gold);
+  width: 2px;
+  height: 52px;
+}
+.date-tick.is-origin span { opacity: 1; color: var(--gold); }
+
+.rail-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  padding-top: var(--space-xs);
+  border-top: 1px dashed var(--line);
+}
+.rail-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: var(--space-2xs);
+}
+.rail-months button {
+  appearance: none;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: none;
+  color: var(--ink-soft);
+  font-family: var(--sc-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  transition: color 200ms var(--ease), background-color 200ms var(--ease);
+}
+.rail-months button:hover { color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.rail-months button.is-active { color: var(--gold); background: color-mix(in oklab, var(--gold) 14%, transparent); }
+.rail-months button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rail-years button {
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 14px;
+  background: none;
+  color: var(--ink-soft);
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  transition: color 240ms var(--ease), border-color 240ms var(--ease);
+}
+.rail-years button:hover { color: var(--accent); border-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+.rail-years button.is-active {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+.rail-years button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 日记阅读区：PDF 页已预渲染为图片，直接内嵌，无下载、无插件 */
+.diary-reader {
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: minmax(240px, 0.7fr) minmax(0, 1.5fr);
+  align-items: start;
+}
+
+.diary-meta { position: sticky; top: 16vh; }
+.diary-meta h3 {
+  margin: 0;
+  font-family: var(--sc-font-display);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.diary-offset {
+  margin: var(--space-2xs) 0 0;
+  font-family: var(--sc-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+}
+.diary-hint {
+  margin: var(--space-sm) 0 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.diary-sheet {
+  position: relative;
+  padding: clamp(14px, 2vw, 26px);
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  background: color-mix(in oklab, var(--canvas) 40%, #fff);
+  backdrop-filter: blur(var(--blur)) saturate(1.1);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.1);
+  box-shadow: 0 2px 4px color-mix(in oklab, var(--ink) 8%, transparent),
+              0 50px 90px -46px color-mix(in oklab, var(--ink) 52%, transparent);
+}
+
+.diary-pages { display: grid; gap: var(--space-sm); }
+.diary-pages img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--ink) 14%, transparent);
+  opacity: 0;
+  transition: opacity 420ms var(--ease);
+}
+.diary-pages img.is-ready { opacity: 1; }
+
+.diary-empty {
+  margin: 0;
+  padding: var(--space-lg) 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+/* --- 肆 · 长久 ----------------------------------------------------------- */
+
+/* 终章不设自身背景 —— 底色由 body 的滚动渐变一路过渡过来 */
+.chapter-finale {
+  min-height: 460vh;
+  padding: 0;
+}
+
+.finale-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  text-align: center;
+}
+.finale-stage > * { grid-area: 1 / 1; }
+
+.finale-silence {
+  opacity: var(--silence-o, 1);
+  will-change: opacity;
+}
+.finale-silence .folio { color: color-mix(in oklab, #fff 46%, var(--rose)); }
+#finale-date {
+  margin: var(--space-xs) 0 0;
+  font-family: var(--sc-font-display);
+  font-size: clamp(2.6rem, 8vw, 6rem);
+  letter-spacing: 0.06em;
+  color: color-mix(in oklab, #fff 62%, var(--gold));
+}
+
+#memory-orbit {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.memory-token,
+.memory-date {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  will-change: transform, opacity;
+}
+.memory-token {
+  width: clamp(54px, 7vw, 96px);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 20px 50px -22px #000;
+}
+.memory-date {
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: color-mix(in oklab, #fff 58%, var(--gold));
+  white-space: nowrap;
+}
+
+.letter {
+  position: relative;
+  z-index: 2;
+  padding: clamp(28px, 5vw, 64px) clamp(26px, 6vw, 88px);
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in oklab, #fff 18%, transparent);
+  background: color-mix(in oklab, var(--deep) 46%, transparent);
+  backdrop-filter: blur(26px) saturate(1.2);
+  -webkit-backdrop-filter: blur(26px) saturate(1.2);
+  box-shadow: 0 60px 140px -60px #000;
+  opacity: var(--letter-o, 0);
+  transform: translateY(calc((1 - var(--letter-o, 0)) * 18px));
+  will-change: opacity, transform;
+}
+.letter > span {
+  display: block;
+  font-family: var(--sc-font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-style: italic;
+  color: color-mix(in oklab, #fff 58%, var(--gold));
+}
+.letter > span small {
+  display: block;
+  font-family: var(--sc-font-mono);
+  font-size: 10px;
+  font-style: normal;
+  letter-spacing: 0.4em;
+  color: color-mix(in oklab, #fff 40%, var(--rose));
+}
+.letter h2 {
+  margin: var(--space-sm) 0 0;
+  font-family: var(--sc-font-display);
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: #fff8f0;
+}
+.letter i {
+  display: block;
+  width: 96px;
+  height: 1px;
+  margin: var(--space-md) auto;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.letter .verse { margin-top: 0; }
+
+/* --- 响应式 -------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .photo-stage,
+  .diary-reader { grid-template-columns: 1fr; }
+  .chapter-heading,
+  .diary-meta { position: static; }
+  .gallery-plane {
+    grid-column: 1;
+    grid-row: auto;
+    height: min(76svh, 640px);
+    margin-right: 0;
+  }
+  .gallery-margin {
+    grid-row: auto;
+    writing-mode: horizontal-tb;
+    max-height: none;
+    text-align: center;
+  }
+  .tilted-gallery {
+    transform: rotate(-3deg) skewY(-3.5deg) scale(1.05);
+    transform-origin: 50% 40%;
+  }
+  .gallery-column { transform: none; }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --space-xl: 64px;
+    --space-lg: 44px;
+    --blur: 14px;
+  }
+  .chapter { padding: var(--space-lg) 20px; }
+  .cloud-act { height: 240vh; }
+  .tilted-gallery { transform: none; height: 100%; }
+  .gallery-column { transform: none; }
+  .gallery-plane { height: min(70svh, 540px); mask-image: none; -webkit-mask-image: none; }
+  .wordcloud-plate img { width: 94vw; }
+  .rail-shell { padding-bottom: var(--space-sm); }
+  .date-rail { height: 104px; }
+  .diary-sheet { padding: 10px; }
+  .chapter-finale { min-height: 320vh; }
+  .letter { margin: 0 14px; }
+}
+
+/* --- 降低动态效果 -------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition-duration: 1ms !important; }
+  .gallery-track { animation: none !important; will-change: auto; }
+  .tilted-gallery { transform: none !important; height: auto; }
+  .gallery-column { transform: none !important; overflow: visible; height: auto; }
+  .gallery-plane {
+    height: auto;
+    margin-right: 0;
+    overflow: visible;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .cloud-act { height: auto; display: grid; gap: var(--space-lg); }
+  .cloud-curtain,
+  .wordcloud-plate {
+    position: static;
+    height: auto;
+    margin: 0;
+    opacity: 1 !important;
+  }
+  .cloud-curtain { opacity: 1 !important; transform: none !important; }
+  .wordcloud-plate img { transform: none !important; }
+  .chapter-finale { min-height: auto; padding: var(--space-xl) 0; }
+  .finale-stage { position: static; height: auto; gap: var(--space-xl); }
+  .finale-stage > * { grid-area: auto; }
+  .finale-silence { opacity: 1 !important; }
+  .letter { opacity: 1 !important; transform: none !important; }
+  #memory-orbit { display: none; }
+  .diary-pages img { opacity: 1 !important; }
+}
